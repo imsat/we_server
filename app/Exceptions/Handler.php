@@ -2,7 +2,10 @@
 
 namespace App\Exceptions;
 
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -34,8 +37,29 @@ class Handler extends ExceptionHandler
      */
     public function register()
     {
-        $this->reportable(function (Throwable $e) {
-            //
+//        $this->reportable(function (Throwable $e) {
+//            //
+//        });
+
+
+        $this->renderable(function (NotFoundHttpException $e, $request) {
+            return response()->json(['errors' => 'The specified URL cannot be found'], 404);
         });
+
+
+
+    }
+    protected function unauthenticated($request,  AuthenticationException $exception)
+    {
+        if($this->isFrontend($request)){
+            return redirect()->to('/');
+        }
+
+        return response()->json(['error' => 'Unauthenticateddd'], 401);
+    }
+
+    private function isFrontend($request)
+    {
+        return $request->acceptsHtml() && collect($request->route()->middleware())->contains('web');
     }
 }
