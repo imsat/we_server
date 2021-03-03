@@ -27,11 +27,25 @@ class LoginController extends Controller
      */
     public function login(Request $request)
     {
+
+        $request->validate([
+            'email' => 'required|email|max:200',
+            'password' => 'required|string|max:150',
+        ]);
+
         $credential = $request->only('email', 'password');
 
-        $token = JWTAuth::attempt($credential);
 
-        return response()->json(['token' => $token, 'message' => 'Login successfully', 'code' => '200'], 200);
+        if (!$token = JWTAuth::attempt($credential)) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        return response()->json([
+            'token' => $token,
+            'user' => auth()->user()->only(['id', 'name']),
+            'message' => 'Login successfully',
+            'code' => '200'],
+            200);
 
     }
 

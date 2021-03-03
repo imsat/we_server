@@ -26,7 +26,13 @@ class ProductFactory extends Factory
             'title' => $this->faker->unique()->sentence,
             'description' => $this->faker->paragraph,
             'price' => mt_rand(59, 999),
-            'image_url' => $this->faker->unique()->imageUrl(800, 800)
+            'image_url' => $this->faker->randomElement([
+                'prod-1.jpg',
+                'prod-2.jpg',
+                'prod-3.jpg',
+                'prod-4.jpg',
+                'prod-5.jpg',
+            ])
         ];
     }
 

@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProductController;
 
@@ -20,15 +19,12 @@ Route::group(['middleware' => 'api'], function () {
     // ==============================================================
     // Product Section
     // ==============================================================
+    Route::middleware('throttle:product')->post('/products/{product}', [ProductController::class, 'update'])->name('products.update');
     Route::middleware('throttle:product')->resource('/products', ProductController::class, ['except' => ['create', 'edit']]);
-
 
 
 });
 
-//Route::middleware('auth:api')->get('/user', function (Request $request) {
-//    return $request->user();
-//});
 
 
 

@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
@@ -22,13 +21,26 @@ class ProductController extends Controller
      *
      * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
      */
-    public function index()
+    public function index(Request $request)
     {
-        $products = Product::latest()->paginate(10);
+
+        if ($request->has('search')) {
+            $search = $request->search;
+        } else {
+            $search = '';
+        }
+
+        $products = Product::latest()
+            ->where(function ($query) use ($search) {
+                $query->where('title', 'LIKE', "%$search%")
+                    ->orWhere('price', 'LIKE', "%$search%")
+                    ->orWhere('description', 'LIKE', "%$search%");
+            })
+            ->paginate($request->itemsPerPage, ['*'], 'page', $request->page);
+
         return ProductResource::collection($products);
 
     }
-
 
     /**
      * Store a newly created resource in storage.
@@ -39,13 +51,28 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        $this->validate($request, [
+
+        $request->validate([
             'title' => 'required|string',
             'price' => 'required',
-            'image_url' => 'required',
+            'image_url' => 'required|max:2048',
         ]);
 
-        $product = Product::create($request->all());
+        $data = $request->only(['title', 'price', 'image_url', 'description']);
+
+        if ($request->hasFile('image_url')) {
+
+            $image = $data['image_url'];
+
+            $imageSize = $image->getSize();
+            $originalExtension = $image->getClientOriginalExtension();
+            $imageName = time() . '.' . $imageSize . '.' . $originalExtension;
+
+            $image->move("products", $imageName);
+            $data['image_url'] = $imageName;
+        }
+
+        $product = Product::create($data);
 
         return (new ProductResource($product))->response()->setStatusCode(201);
     }
@@ -71,27 +98,29 @@ class ProductController extends Controller
      */
     public function update(Request $request, Product $product)
     {
-
-        $this->validate($request, [
+        $request->validate([
             'title' => 'required|string',
             'price' => 'required',
-            'image_url' => 'required',
+            'image_url' => 'sometimes|max:2048',
         ]);
 
-        $product->fill($request->only([
-            'title',
-            'description',
-            'price',
-            'image_url',
-        ]));
+        if ($request->hasFile('image_url')) {
+            $data = $request->only(['title', 'price', 'image_url', 'description']);
 
-        //Check if the product and all the updated attribute(s) have remained the same.
-        if($product->isClean()){
-           return response()->json(['errors' => 'You need to specify a different value to update', 'code' => 422], 422);
+            $image = $request->image_url;
+
+            $imageSize = $image->getSize();
+            $originalExtension = $image->getClientOriginalExtension();
+            $imageName = time() . '.' . $imageSize . '.' . $originalExtension;
+
+            $image->move("products", $imageName);
+            $data['image_url'] = $imageName;
+        } else {
+            $data = $request->only(['title', 'price', 'description']);
         }
 
-        //If all ok then update
-        $product->save();
+        // Update final data;
+        $product->update($data);
 
         return (new ProductResource($product))->response()->setStatusCode(202);
     }
@@ -104,8 +133,10 @@ class ProductController extends Controller
      */
     public function destroy(Product $product)
     {
+        //Permanent delete
         $product->forceDelete();
-        return response()->json(['message' =>  'Deleted successful', 'code' => 200], 200);
+
+        return response()->json(['message' => 'Deleted successful', 'code' => 200], 200);
 
     }
 

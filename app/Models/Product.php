@@ -17,4 +17,15 @@ class Product extends Model
         'image_url',
     ];
 
+    /**
+     * Product image url accessor.
+     *
+     * @param $imageUrl
+     * @return string
+     */
+    public function getImageUrlAttribute($imageUrl)
+    {
+        return asset('products') . '/' . $imageUrl;
+    }
+
 }
